@@ -10,4 +10,5 @@ go/
 .*
 !.gitignore
 !.bashrc
+!.alias.bash
 /pprof
