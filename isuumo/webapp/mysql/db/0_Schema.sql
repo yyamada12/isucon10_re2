@@ -20,7 +20,8 @@ CREATE TABLE isuumo.estate
     popularity  INTEGER             NOT NULL,
     minuspopularity INTEGER AS (-popularity) NOT NULL,
     INDEX idx_rent(rent, id),
-    INDEX idx_minuspopularity(minuspopularity, id)
+    INDEX idx_minuspopularity(minuspopularity, id),
+    INDEX idx_lat_lon(latitude, longitude)
 );
 
 CREATE TABLE isuumo.chair
