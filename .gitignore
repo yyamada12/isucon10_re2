@@ -6,7 +6,7 @@ isuumo/webapp/ruby/
 isuumo/webapp/rust/
 isuumo/webapp/deno/
 local/
-go/
+/go/
 .*
 !.gitignore
 !.bashrc
