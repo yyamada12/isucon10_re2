@@ -45,5 +45,6 @@ CREATE TABLE isuumo.chair
     minuspopularity INTEGER AS (-popularity) NOT NULL,
     stock       INTEGER         NOT NULL,
     INDEX idx_price(price, id),
-    INDEX idx_minuspopularity(minuspopularity, id)
+    INDEX idx_minuspopularity(minuspopularity, id),
+    INDEX idx_price_stock(price, stock)
 );
