@@ -259,11 +259,11 @@ func main() {
 
 	// Echo instance
 	e := echo.New()
-	e.Debug = true
-	e.Logger.SetLevel(log.DEBUG)
+	e.Debug = false
+	e.Logger.SetLevel(log.OFF)
 
 	// Middleware
-	e.Use(middleware.Logger())
+	// e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
 	// Initialize
@@ -294,6 +294,7 @@ func main() {
 	db, err = mySQLConnectionData.ConnectDB()
 	if err != nil {
 		e.Logger.Fatalf("DB connection failed : %v", err)
+		panic(err)
 	}
 	db.SetMaxOpenConns(10)
 	defer db.Close()
@@ -301,6 +302,7 @@ func main() {
 	db2, err = mySQLConnectionData2.ConnectDB()
 	if err != nil {
 		e.Logger.Fatalf("DB connection failed : %v", err)
+		panic(err)
 	}
 	db2.SetMaxOpenConns(10)
 	defer db2.Close()
@@ -328,7 +330,7 @@ func initialize(c echo.Context) error {
 			sqlFile,
 		)
 		if err := exec.Command("bash", "-c", cmdStr).Run(); err != nil {
-			c.Logger().Errorf("Initialize script error : %v", err)
+			// c.Logger().Errorf("Initialize script error : %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
@@ -348,7 +350,7 @@ func initialize(c echo.Context) error {
 			sqlFile,
 		)
 		if err := exec.Command("bash", "-c", cmdStr).Run(); err != nil {
-			c.Logger().Errorf("Initialize script error : %v", err)
+			// c.Logger().Errorf("Initialize script error : %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
@@ -361,7 +363,7 @@ func initialize(c echo.Context) error {
 func getChairDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.Echo().Logger.Errorf("Request parameter \"id\" parse error : %v", err)
+		// c.Echo().Logger.Errorf("Request parameter \"id\" parse error : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
@@ -370,13 +372,13 @@ func getChairDetail(c echo.Context) error {
 	err = db2.Get(&chair, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Echo().Logger.Infof("requested id's chair not found : %v", id)
+			// c.Echo().Logger.Infof("requested id's chair not found : %v", id)
 			return c.NoContent(http.StatusNotFound)
 		}
-		c.Echo().Logger.Errorf("Failed to get the chair from id : %v", err)
+		// c.Echo().Logger.Errorf("Failed to get the chair from id : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	} else if chair.Stock <= 0 {
-		c.Echo().Logger.Infof("requested id's chair is sold out : %v", id)
+		// c.Echo().Logger.Infof("requested id's chair is sold out : %v", id)
 		return c.NoContent(http.StatusNotFound)
 	}
 
@@ -386,24 +388,24 @@ func getChairDetail(c echo.Context) error {
 func postChair(c echo.Context) error {
 	header, err := c.FormFile("chairs")
 	if err != nil {
-		c.Logger().Errorf("failed to get form file: %v", err)
+		// c.Logger().Errorf("failed to get form file: %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 	f, err := header.Open()
 	if err != nil {
-		c.Logger().Errorf("failed to open form file: %v", err)
+		// c.Logger().Errorf("failed to open form file: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer f.Close()
 	records, err := csv.NewReader(f).ReadAll()
 	if err != nil {
-		c.Logger().Errorf("failed to read csv: %v", err)
+		// c.Logger().Errorf("failed to read csv: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	tx, err := db2.Begin()
 	if err != nil {
-		c.Logger().Errorf("failed to begin tx: %v", err)
+		// c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
@@ -423,17 +425,17 @@ func postChair(c echo.Context) error {
 		popularity := rm.NextInt()
 		stock := rm.NextInt()
 		if err := rm.Err(); err != nil {
-			c.Logger().Errorf("failed to read record: %v", err)
+			// c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 		_, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock)
 		if err != nil {
-			c.Logger().Errorf("failed to insert chair: %v", err)
+			// c.Logger().Errorf("failed to insert chair: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		c.Logger().Errorf("failed to commit tx: %v", err)
+		// c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	return c.NoContent(http.StatusCreated)
@@ -446,7 +448,7 @@ func searchChairs(c echo.Context) error {
 	if c.QueryParam("priceRangeId") != "" {
 		chairPrice, err := getRange(chairSearchCondition.Price, c.QueryParam("priceRangeId"))
 		if err != nil {
-			c.Echo().Logger.Infof("priceRangeID invalid, %v : %v", c.QueryParam("priceRangeId"), err)
+			// c.Echo().Logger.Infof("priceRangeID invalid, %v : %v", c.QueryParam("priceRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 
@@ -463,7 +465,7 @@ func searchChairs(c echo.Context) error {
 	if c.QueryParam("heightRangeId") != "" {
 		chairHeight, err := getRange(chairSearchCondition.Height, c.QueryParam("heightRangeId"))
 		if err != nil {
-			c.Echo().Logger.Infof("heightRangeIf invalid, %v : %v", c.QueryParam("heightRangeId"), err)
+			// c.Echo().Logger.Infof("heightRangeIf invalid, %v : %v", c.QueryParam("heightRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 
@@ -480,7 +482,7 @@ func searchChairs(c echo.Context) error {
 	if c.QueryParam("widthRangeId") != "" {
 		chairWidth, err := getRange(chairSearchCondition.Width, c.QueryParam("widthRangeId"))
 		if err != nil {
-			c.Echo().Logger.Infof("widthRangeID invalid, %v : %v", c.QueryParam("widthRangeId"), err)
+			// c.Echo().Logger.Infof("widthRangeID invalid, %v : %v", c.QueryParam("widthRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 
@@ -497,7 +499,7 @@ func searchChairs(c echo.Context) error {
 	if c.QueryParam("depthRangeId") != "" {
 		chairDepth, err := getRange(chairSearchCondition.Depth, c.QueryParam("depthRangeId"))
 		if err != nil {
-			c.Echo().Logger.Infof("depthRangeId invalid, %v : %v", c.QueryParam("depthRangeId"), err)
+			// c.Echo().Logger.Infof("depthRangeId invalid, %v : %v", c.QueryParam("depthRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 
@@ -529,7 +531,7 @@ func searchChairs(c echo.Context) error {
 	}
 
 	if len(conditions) == 0 {
-		c.Echo().Logger.Infof("Search condition not found")
+		// c.Echo().Logger.Infof("Search condition not found")
 		return c.NoContent(http.StatusBadRequest)
 	}
 
@@ -537,13 +539,13 @@ func searchChairs(c echo.Context) error {
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
 	if err != nil {
-		c.Logger().Infof("Invalid format page parameter : %v", err)
+		// c.Logger().Infof("Invalid format page parameter : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
 	perPage, err := strconv.Atoi(c.QueryParam("perPage"))
 	if err != nil {
-		c.Logger().Infof("Invalid format perPage parameter : %v", err)
+		// c.Logger().Infof("Invalid format perPage parameter : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
@@ -555,7 +557,7 @@ func searchChairs(c echo.Context) error {
 	var res ChairSearchResponse
 	err = db2.Get(&res.Count, countQuery+searchCondition, params...)
 	if err != nil {
-		c.Logger().Errorf("searchChairs DB execution error : %v", err)
+		// c.Logger().Errorf("searchChairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -566,7 +568,7 @@ func searchChairs(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return c.JSON(http.StatusOK, ChairSearchResponse{Count: 0, Chairs: []Chair{}})
 		}
-		c.Logger().Errorf("searchChairs DB execution error : %v", err)
+		// c.Logger().Errorf("searchChairs DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -578,25 +580,25 @@ func searchChairs(c echo.Context) error {
 func buyChair(c echo.Context) error {
 	m := echo.Map{}
 	if err := c.Bind(&m); err != nil {
-		c.Echo().Logger.Infof("post buy chair failed : %v", err)
+		// c.Echo().Logger.Infof("post buy chair failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	_, ok := m["email"].(string)
 	if !ok {
-		c.Echo().Logger.Info("post buy chair failed : email not found in request body")
+		// c.Echo().Logger.Info("post buy chair failed : email not found in request body")
 		return c.NoContent(http.StatusBadRequest)
 	}
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.Echo().Logger.Infof("post buy chair failed : %v", err)
+		// c.Echo().Logger.Infof("post buy chair failed : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
 	tx, err := db2.Beginx()
 	if err != nil {
-		c.Echo().Logger.Errorf("failed to create transaction : %v", err)
+		// c.Echo().Logger.Errorf("failed to create transaction : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
@@ -605,22 +607,22 @@ func buyChair(c echo.Context) error {
 	err = tx.QueryRowx("SELECT id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock FROM chair WHERE id = ? AND stock > 0 FOR UPDATE", id).StructScan(&chair)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Echo().Logger.Infof("buyChair chair id \"%v\" not found", id)
+			// c.Echo().Logger.Infof("buyChair chair id \"%v\" not found", id)
 			return c.NoContent(http.StatusNotFound)
 		}
-		c.Echo().Logger.Errorf("DB Execution Error: on getting a chair by id : %v", err)
+		// c.Echo().Logger.Errorf("DB Execution Error: on getting a chair by id : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	_, err = tx.Exec("UPDATE chair SET stock = stock - 1 WHERE id = ?", id)
 	if err != nil {
-		c.Echo().Logger.Errorf("chair stock update failed : %v", err)
+		// c.Echo().Logger.Errorf("chair stock update failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		c.Echo().Logger.Errorf("transaction commit error : %v", err)
+		// c.Echo().Logger.Errorf("transaction commit error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -637,10 +639,10 @@ func getLowPricedChair(c echo.Context) error {
 	err := db2.Select(&chairs, query, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Logger().Error("getLowPricedChair not found")
+			// c.Logger().Error("getLowPricedChair not found")
 			return c.JSON(http.StatusOK, ChairListResponse{[]Chair{}})
 		}
-		c.Logger().Errorf("getLowPricedChair DB execution error : %v", err)
+		// c.Logger().Errorf("getLowPricedChair DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -650,7 +652,7 @@ func getLowPricedChair(c echo.Context) error {
 func getEstateDetail(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.Echo().Logger.Infof("Request parameter \"id\" parse error : %v", err)
+		// c.Echo().Logger.Infof("Request parameter \"id\" parse error : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
@@ -658,10 +660,10 @@ func getEstateDetail(c echo.Context) error {
 	err = db.Get(&estate, "SELECT id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity FROM estate WHERE id = ?", id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Echo().Logger.Infof("getEstateDetail estate id %v not found", id)
+			// c.Echo().Logger.Infof("getEstateDetail estate id %v not found", id)
 			return c.NoContent(http.StatusNotFound)
 		}
-		c.Echo().Logger.Errorf("Database Execution error : %v", err)
+		// c.Echo().Logger.Errorf("Database Execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -684,24 +686,24 @@ func getRange(cond RangeCondition, rangeID string) (*Range, error) {
 func postEstate(c echo.Context) error {
 	header, err := c.FormFile("estates")
 	if err != nil {
-		c.Logger().Errorf("failed to get form file: %v", err)
+		// c.Logger().Errorf("failed to get form file: %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 	f, err := header.Open()
 	if err != nil {
-		c.Logger().Errorf("failed to open form file: %v", err)
+		// c.Logger().Errorf("failed to open form file: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer f.Close()
 	records, err := csv.NewReader(f).ReadAll()
 	if err != nil {
-		c.Logger().Errorf("failed to read csv: %v", err)
+		// c.Logger().Errorf("failed to read csv: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	tx, err := db.Begin()
 	if err != nil {
-		c.Logger().Errorf("failed to begin tx: %v", err)
+		// c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
@@ -723,7 +725,7 @@ func postEstate(c echo.Context) error {
 		features := rm.NextString()
 		popularity := rm.NextInt()
 		if err := rm.Err(); err != nil {
-			c.Logger().Errorf("failed to read record: %v", err)
+			// c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 		placeholders = append(placeholders, "(?,?,?,?,?,?,?,?,?,?,?,?)")
@@ -731,12 +733,12 @@ func postEstate(c echo.Context) error {
 	}
 	_, err = tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES"+strings.Join(placeholders, ","), values...)
 	if err != nil {
-		c.Logger().Errorf("failed to insert estate: %v", err)
+		// c.Logger().Errorf("failed to insert estate: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	if err := tx.Commit(); err != nil {
-		c.Logger().Errorf("failed to commit tx: %v", err)
+		// c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	return c.NoContent(http.StatusCreated)
@@ -749,7 +751,7 @@ func searchEstates(c echo.Context) error {
 	if c.QueryParam("doorHeightRangeId") != "" {
 		doorHeight, err := getRange(estateSearchCondition.DoorHeight, c.QueryParam("doorHeightRangeId"))
 		if err != nil {
-			c.Echo().Logger.Infof("doorHeightRangeID invalid, %v : %v", c.QueryParam("doorHeightRangeId"), err)
+			// c.Echo().Logger.Infof("doorHeightRangeID invalid, %v : %v", c.QueryParam("doorHeightRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 
@@ -766,7 +768,7 @@ func searchEstates(c echo.Context) error {
 	if c.QueryParam("doorWidthRangeId") != "" {
 		doorWidth, err := getRange(estateSearchCondition.DoorWidth, c.QueryParam("doorWidthRangeId"))
 		if err != nil {
-			c.Echo().Logger.Infof("doorWidthRangeID invalid, %v : %v", c.QueryParam("doorWidthRangeId"), err)
+			// c.Echo().Logger.Infof("doorWidthRangeID invalid, %v : %v", c.QueryParam("doorWidthRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 
@@ -783,7 +785,7 @@ func searchEstates(c echo.Context) error {
 	if c.QueryParam("rentRangeId") != "" {
 		estateRent, err := getRange(estateSearchCondition.Rent, c.QueryParam("rentRangeId"))
 		if err != nil {
-			c.Echo().Logger.Infof("rentRangeID invalid, %v : %v", c.QueryParam("rentRangeId"), err)
+			// c.Echo().Logger.Infof("rentRangeID invalid, %v : %v", c.QueryParam("rentRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
 
@@ -805,19 +807,19 @@ func searchEstates(c echo.Context) error {
 	}
 
 	if len(conditions) == 0 {
-		c.Echo().Logger.Infof("searchEstates search condition not found")
+		// c.Echo().Logger.Infof("searchEstates search condition not found")
 		return c.NoContent(http.StatusBadRequest)
 	}
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
 	if err != nil {
-		c.Logger().Infof("Invalid format page parameter : %v", err)
+		// c.Logger().Infof("Invalid format page parameter : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
 	perPage, err := strconv.Atoi(c.QueryParam("perPage"))
 	if err != nil {
-		c.Logger().Infof("Invalid format perPage parameter : %v", err)
+		// c.Logger().Infof("Invalid format perPage parameter : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
@@ -829,7 +831,7 @@ func searchEstates(c echo.Context) error {
 	var res EstateSearchResponse
 	err = db.Get(&res.Count, countQuery+searchCondition, params...)
 	if err != nil {
-		c.Logger().Errorf("searchEstates DB execution error : %v", err)
+		// c.Logger().Errorf("searchEstates DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -840,7 +842,7 @@ func searchEstates(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
 		}
-		c.Logger().Errorf("searchEstates DB execution error : %v", err)
+		// c.Logger().Errorf("searchEstates DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -855,10 +857,10 @@ func getLowPricedEstate(c echo.Context) error {
 	err := db.Select(&estates, query, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Logger().Error("getLowPricedEstate not found")
+			// c.Logger().Error("getLowPricedEstate not found")
 			return c.JSON(http.StatusOK, EstateListResponse{[]Estate{}})
 		}
-		c.Logger().Errorf("getLowPricedEstate DB execution error : %v", err)
+		// c.Logger().Errorf("getLowPricedEstate DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -868,7 +870,7 @@ func getLowPricedEstate(c echo.Context) error {
 func searchRecommendedEstateWithChair(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.Logger().Infof("Invalid format searchRecommendedEstateWithChair id : %v", err)
+		// c.Logger().Infof("Invalid format searchRecommendedEstateWithChair id : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
@@ -877,10 +879,10 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	err = db2.Get(&chair, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.Logger().Infof("Requested chair id \"%v\" not found", id)
+			// c.Logger().Infof("Requested chair id \"%v\" not found", id)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		c.Logger().Errorf("Database execution error : %v", err)
+		// c.Logger().Errorf("Database execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -894,7 +896,7 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return c.JSON(http.StatusOK, EstateListResponse{[]Estate{}})
 		}
-		c.Logger().Errorf("Database execution error : %v", err)
+		// c.Logger().Errorf("Database execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -905,7 +907,7 @@ func searchEstateNazotte(c echo.Context) error {
 	coordinates := Coordinates{}
 	err := c.Bind(&coordinates)
 	if err != nil {
-		c.Echo().Logger.Infof("post search estate nazotte failed : %v", err)
+		// c.Echo().Logger.Infof("post search estate nazotte failed : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
@@ -918,10 +920,10 @@ func searchEstateNazotte(c echo.Context) error {
 	query := fmt.Sprintf(`SELECT id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? AND ST_Contains(ST_PolygonFromText(%s), ST_GeomFromText(CONCAT('POINT(', latitude, ' ', longitude,')'))) ORDER BY minuspopularity ASC, id ASC LIMIT 50`, coordinates.coordinatesToText())
 	err = db.Select(&estatesInPolygon, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
 	if err == sql.ErrNoRows {
-		c.Echo().Logger.Infof("SELECT id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity FROM estate where latitude ...", err)
+		// c.Echo().Logger.Infof("SELECT id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity FROM estate where latitude ...", err)
 		return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
 	} else if err != nil {
-		c.Echo().Logger.Errorf("database execution error : %v", err)
+		// c.Echo().Logger.Errorf("database execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -935,19 +937,19 @@ func searchEstateNazotte(c echo.Context) error {
 func postEstateRequestDocument(c echo.Context) error {
 	m := echo.Map{}
 	if err := c.Bind(&m); err != nil {
-		c.Echo().Logger.Infof("post request document failed : %v", err)
+		// c.Echo().Logger.Infof("post request document failed : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	_, ok := m["email"].(string)
 	if !ok {
-		c.Echo().Logger.Info("post request document failed : email not found in request body")
+		// c.Echo().Logger.Info("post request document failed : email not found in request body")
 		return c.NoContent(http.StatusBadRequest)
 	}
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.Echo().Logger.Infof("post request document failed : %v", err)
+		// c.Echo().Logger.Infof("post request document failed : %v", err)
 		return c.NoContent(http.StatusBadRequest)
 	}
 
@@ -958,7 +960,7 @@ func postEstateRequestDocument(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			return c.NoContent(http.StatusNotFound)
 		}
-		c.Logger().Errorf("postEstateRequestDocument DB execution error : %v", err)
+		// c.Logger().Errorf("postEstateRequestDocument DB execution error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
